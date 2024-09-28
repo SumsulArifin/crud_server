@@ -1,15 +1,18 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 3000;
 
 app.use(cors({
-    origin: 'http://localhost:5173',  // Frontend address
-    methods: 'GET,POST,PUT,DELETE',   // Allowed methods
-    credentials: true                 // If you are using cookies, enable this
+    origin: 'http://localhost:5173', // Allow requests from this origin
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    credentials: true
 }));
+app.options('*', cors()); // Enable pre-flight for all routes
+
+
 app.use(express.json());
 app.listen(port, () => {
     console.log(`Port runing on ${port}`);
@@ -57,12 +60,27 @@ async function run() {
             res.send(result);
         })
 
+        // app.delete("/users/:id", async (req, res) => {
+        //     const id = req.params.id;
+        //     const quary = { _id: new ObjectId(id) };
+        //     const result = await userCollection.deleteOne(quary);
+        //     res.send(result);
+        // })
         app.delete("/users/:id", async (req, res) => {
             const id = req.params.id;
-            const quary = { _id: new ObjectId(id) };
-            const result = await userCollection.deleteOne(quary);
-            res.send(result);
-        })
+            try {
+                const query = { _id: new ObjectId(id) };
+                const result = await userCollection.deleteOne(query);
+                if (result.deletedCount === 0) {
+                    return res.status(404).send({ error: "User not found" });
+                }
+                res.send({ message: "User deleted successfully" });
+            } catch (error) {
+                res.status(500).send({ error: "An error occurred while deleting the user" });
+                console.error(error);
+            }
+        });
+        
         app.patch("/users", async (req, res) => {
             const user = req.body;
             const filter = { email: user.email }
@@ -89,3 +107,5 @@ run().catch(console.dir);
 app.get('/', (req, res) => {
     res.send('Coffee making server is running')
 })
+
+module.exports = app;
